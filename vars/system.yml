@@ -25,7 +25,7 @@ timezone: ""
 # (except RHEL>=8,use glibc-langpack)
 locale_gen:
   - { language_country: "en_US", encoding: "UTF-8" }
-#  - { language_country: "ru_RU", encoding: "UTF-8" }
+  - { language_country: "ru_RU", encoding: "UTF-8" }
 #  - { language_country: "de_DE", encoding: "UTF-8" }
 #  - { language_country: "", encoding: "" }
 
