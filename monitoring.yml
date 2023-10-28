@@ -1,0 +1,86 @@
+---
+- name: Install Prometheus on haproxy server
+  hosts: balancers
+  tags: prometheus
+  roles:
+  - prometheus.prometheus.prometheus
+  vars:
+    prometheus_targets:
+      node:
+      - targets:
+        - localhost:9100
+        - 10.0.10.2:9100
+        - 10.0.10.3:9100
+        - 10.0.10.4:9100
+        - 10.0.10.5:9100
+        - 10.0.10.6:9100
+        - 10.0.10.2:9187
+        - 10.0.10.3:9187
+        - 10.0.10.2:8008
+        - 10.0.10.3:8008
+        - 10.0.10.4:2379
+        - 10.0.10.5:2379
+        - 10.0.10.6:2379
+        - localhost:9115
+        - localhost:9093
+    prometheus_alertmanager_config:
+      - static_configs:
+        - targets:
+          - localhost:9093
+    prometheus_scrape_configs:
+      - job_name: blackbox-http
+        metrics_path: /probe
+        params:
+          module:
+          - http_2xx
+        relabel_configs:
+        - source_labels:
+          - __address__
+          target_label: __param_target
+        - source_labels:
+          - __param_target
+          target_label: instance
+        - replacement: localhost:9115
+          target_label: __address__
+        static_configs:
+        - targets:
+          - http://veronblg.local/WeatherForecast/
+      - job_name: prometheus
+        metrics_path: /metrics
+        static_configs:
+        - targets:
+          - localhost:9090
+      - job_name: node
+        file_sd_configs:
+        - files:
+          - /etc/prometheus/file_sd/node.yml
+- name: Install blackbox_exporter on haproxy server
+  hosts: balancers
+  tags: blackbox_exporter
+  roles:
+  - prometheus.prometheus.blackbox_exporter
+- name: Install node_exporter on all servers
+  hosts: all
+  tags: node_exporter
+  roles:
+  - prometheus.prometheus.node_exporter
+- name: Install postgres_exporter on postgres servers
+  hosts: master,replica
+  tags: postgres_exporter
+  roles:
+  - role: ome.prometheus_postgres
+    prometheus_postgres_dbname: sreapp
+- name: Install alertmanager
+  hosts: balancers
+  roles:
+  - role: prometheus.prometheus.alertmanager
+  vars:
+    alertmanager_receivers:
+      - name: nonexistent-webhook
+        webhook_configs:
+          - url: http://somenonexistdomain.local/
+    alertmanager_route:
+      receiver: nonexistent-webhook
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
