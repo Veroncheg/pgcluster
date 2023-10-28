@@ -1,0 +1,35 @@
+groups:
+- name: 4 Golden Signals
+  rules:
+  - alert: HighMemoryUtilization
+    expr: (1-avg_over_time(node_memory_MemFree_bytes[5m])/node_memory_MemTotal_bytes) > 0.9
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: 'Memory utilization for node {{ $labels.instance }} is more than 90%'
+      summary: Check memory utilization
+  - alert: HighCpuUtilization
+    expr: (sum by(instance) (irate(node_cpu_seconds_total{job="node", mode!="idle"}[1m])) / on(instance) group_left sum by (instance)((irate(node_cpu_seconds_total{job="node"}[1m])))) > 0.9
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      description: '{{ $labels.instance }} cpu utilization is high!.'
+      summary: Instance {{ $labels.instance }} has high CPU utilization.
+  - alert: HighErrorsPerSecond
+    expr: (sum by(status) (rate(nginx_ingress_controller_requests{ingress="sreapp", status!~"2.."}[2m0s]))) > 20
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      description: '{{ $labels.status }} error rate is high per minute'
+      summary: '{{ $labels.status }} error rate is high per minute'
+  - alert: HighLatency
+    expr: histogram_quantile(0.95, sum(rate(nginx_ingress_controller_request_duration_seconds_bucket{ingress="sreapp",status=~"2.."}[2m0s])) by (le)) > 0.05
+    for: 5m
+    labels:
+      severity: warning
+    annotations:
+      description: 'High backend response latency'
+      summary: 'Check backend functionality'
